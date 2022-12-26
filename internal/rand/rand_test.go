@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-func TestRandomizer_init(t *testing.T) {
+func TestCore_init(t *testing.T) {
 	a := assert.New(t)
 
-	tested := randomizer{}
+	tested := core{}
 
 	// error raise check
 	for _, center := range []float64{-2.0, -1.1, -0.5, 1.001} {
@@ -44,8 +44,8 @@ func TestRandomizer_init(t *testing.T) {
 	}
 }
 
-func TestRandomizer_EnableHash(t *testing.T) {
-	tested := randomizer{disableHash: false}
+func TestCore_EnableHash(t *testing.T) {
+	tested := core{disableHash: false}
 
 	for _, in := range []bool{true, false} {
 		expected := !in
@@ -55,7 +55,7 @@ func TestRandomizer_EnableHash(t *testing.T) {
 	}
 }
 
-func TestRandomizer_hash(t *testing.T) {
+func TestCore_hash(t *testing.T) {
 	a := assert.New(t)
 
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -64,7 +64,7 @@ func TestRandomizer_hash(t *testing.T) {
 	center := 0.5
 	offset := uint64(float64(nRange) * center)
 
-	tested := randomizer{}
+	tested := core{}
 	_ = tested.init(0, nRange, center)
 
 	for i := uint64(0); i < nRange; i++ {

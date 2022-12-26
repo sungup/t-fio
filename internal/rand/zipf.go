@@ -6,15 +6,15 @@ import (
 )
 
 type Zipf struct {
-	randomizer
+	core
 	zipf *rand.Zipf
 }
 
 func (z *Zipf) Uint64() uint64 {
-	return z.randomizer.hash(z.zipf.Uint64())
+	return z.core.hash(z.zipf.Uint64())
 }
 
-func NewZipf(seed int64, nRange uint64, center, theta float64) (Randomizer, error) {
+func NewZipf(seed int64, nRange uint64, center, theta float64) (Rand, error) {
 	z := &Zipf{}
 	if err := z.init(seed, nRange, center); err != nil {
 		return nil, err
