@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"runtime"
 	"time"
 
 	"github.com/ncw/directio"
@@ -62,4 +63,10 @@ func OpenTCFile(filename string, size int64) (fp *os.File, closer func(), err er
 	}
 
 	return fp, closer, err
+}
+
+func ProjectDir() string {
+	_, filename, _, _ := runtime.Caller(0)
+
+	return path.Dir(path.Dir(filename))
 }

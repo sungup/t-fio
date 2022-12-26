@@ -1,27 +1,28 @@
 package rand
 
 import (
+	"fmt"
 	"math/rand"
-	"time"
 )
 
-type ZipfRand struct {
-	base int64
-
-	rand *rand.Zipf
+type Zipf struct {
+	randomizer
+	zipf *rand.Zipf
 }
 
-func (z *ZipfRand) PageNo() int64 {
-	return z.base + int64(z.rand.Uint64())
+func (z *Zipf) Uint64() uint64 {
+	return z.randomizer.hash(z.zipf.Uint64())
 }
 
-func NewZipf(pageSz, baseOffset, ioRangeSz int64, s, v float64) Randomizer {
-	// FIO uses theta and value population
-	// we can change value population to ranks from "ioRangeSz / pageSz * vPopulation", and also
-	// we can change theta to
-
-	return &ZipfRand{
-		base: baseOffset / pageSz,
-		rand: rand.NewZipf(rand.New(rand.NewSource(time.Now().UnixNano())), s, v, uint64(ioRangeSz/pageSz)),
+func NewZipf(seed int64, nRange uint64, center, theta float64) (Randomizer, error) {
+	z := &Zipf{}
+	if err := z.init(seed, nRange, center); err != nil {
+		return nil, err
 	}
+
+	if z.zipf = rand.NewZipf(z.rand, theta, 1.0, nRange); z.zipf == nil {
+		return nil, fmt.Errorf("theta value is not acceptable to create zipf random: %v", theta)
+	}
+
+	return z, nil
 }
