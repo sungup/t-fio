@@ -14,10 +14,13 @@ func (s *Sequencer) PageNo() int64 {
 	return pageNo
 }
 
-func NewSequencer(max int64) IOPattern {
+type SeqOptions struct {
+	StartFrom float64
+}
 
+func (s *SeqOptions) MakeIOPattern(nRange int64) (IOPattern, error) {
 	return &Sequencer{
-		until:  max,
-		cursor: 0,
-	}
+		until:  nRange,
+		cursor: int64(float64(nRange)*s.StartFrom) % nRange,
+	}, nil
 }

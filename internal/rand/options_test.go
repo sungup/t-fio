@@ -191,3 +191,26 @@ func TestOptions_UnmarshalYAML(t *testing.T) {
 	assert.Equal(t, DefaultDisableHash, tested.DisableHash)
 	assert.IsType(t, &UniformOptions{}, tested.detail)
 }
+
+func TestOptions_MakeRandomizer(t *testing.T) {
+	tested := &Options{
+		Distribution: ZipfDist,
+		Center:       DefaultCenter,
+		Seed:         DefaultSeed,
+		DisableHash:  DefaultDisableHash,
+		detail:       &ZipfOptions{Theta: 1.2},
+	}
+
+	// unexpected error test from not allowed center value
+	tested.Center = -2.0
+	generated, err := tested.MakeRandomizer(1000)
+	assert.Nil(t, generated)
+	assert.Error(t, err)
+	tested.Center = -1.0
+
+	// success case test
+	tested.Center = -1.0
+	generated, err = tested.MakeRandomizer(1000)
+	assert.IsType(t, &Zipf{}, generated)
+	assert.NoError(t, err)
+}

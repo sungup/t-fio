@@ -15,14 +15,14 @@ func (t *tcSequencer) PageNo() int64 {
 	return pageNo
 }
 
-func TestRand_Offset(t *testing.T) {
+func TestGenerator_Offset(t *testing.T) {
 	for pageSz := int64(512); pageSz < 4096; pageSz *= 2 {
 		offset := pageSz * 1024
 		ioRange := pageSz * 1024 * 1024
 		end := offset + ioRange
 
-		tested := Pattern{
-			rnd:        &tcSequencer{i: 0},
+		tested := Generator{
+			pattern:    &tcSequencer{i: 0},
 			pageSz:     pageSz,
 			pageOffset: offset,
 		}

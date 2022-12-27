@@ -148,3 +148,7 @@ func (o *Options) UnmarshalYAML(value *yaml.Node) (err error) {
 
 	return err
 }
+
+func (o *Options) MakeRandomizer(nRange uint64) (Rand, error) {
+	return o.detail.MakeRandomizer(o.Seed, nRange, o.Center)
+}

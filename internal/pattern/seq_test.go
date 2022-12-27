@@ -19,12 +19,16 @@ func TestSequencer_PageNo(t *testing.T) {
 	}
 }
 
-func TestNewSequencer(t *testing.T) {
-	loop := int64(1024)
+func TestSeqOptions_MakeIOPattern(t *testing.T) {
+	tested := &SeqOptions{StartFrom: 0.5}
 
-	for expected := int64(0); expected < loop; expected++ {
-		tested := NewSequencer(expected)
-		assert.Zero(t, tested.(*Sequencer).cursor)
-		assert.Equal(t, expected, tested.(*Sequencer).until)
+	loop := int64(16384)
+	for expectedRange := int64(16); expectedRange < loop; expectedRange <<= 1 {
+		expectedCursor := expectedRange >> 1
+
+		testedV, err := tested.MakeIOPattern(expectedRange)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedRange, testedV.(*Sequencer).until)
+		assert.Equal(t, expectedCursor, testedV.(*Sequencer).cursor)
 	}
 }
