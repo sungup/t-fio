@@ -1,15 +1,17 @@
 package rand
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 	"testing"
 )
 
 func TestZipf_Uint64(t *testing.T) {
 	nRange := uint64(1000)
 	buckets := make([]uint64, nRange)
-	tested, _ := NewZipf(0, nRange, 0, 1.2)
+	tested, _ := (&ZipfOptions{Theta: 1.2}).MakeRandomizer(0, nRange, 0)
 	loop := 1000000
 
 	tested.EnableHash(false)
@@ -35,19 +37,68 @@ func TestZipf_Uint64(t *testing.T) {
 	}
 }
 
-func TestNewZipf(t *testing.T) {
-	// initializing fail
-	tested, err := NewZipf(0, 100, -2.0, 1.2)
-	assert.Nil(t, tested)
-	assert.EqualError(t, err, fmt.Sprintf("unexpected center range: %v", -2.0))
+func TestZipfOptions_UnmarshalJSON(t *testing.T) {
+	tested := &ZipfOptions{}
+	template := "{\"theta\": %v}"
+
+	// type mismatch error
+	assert.Error(t, json.Unmarshal([]byte(fmt.Sprintf(template, "\"string\"")), tested))
+	assert.Zero(t, tested.Theta)
+
+	// invalid value range
+	assert.Error(t, json.Unmarshal([]byte(fmt.Sprintf(template, 0.5)), tested))
+	assert.Zero(t, tested.Theta)
+
+	// valid change
+	expected := 1.5
+	assert.NoError(t, json.Unmarshal([]byte(fmt.Sprintf(template, expected)), tested))
+	assert.Equal(t, expected, tested.Theta)
+
+	// default option check
+	assert.NoError(t, json.Unmarshal([]byte("{}"), tested))
+	assert.Equal(t, DefaultZipfTheta, tested.Theta)
+}
+
+func TestZipfOptions_UnmarshalYAML(t *testing.T) {
+	tested := &ZipfOptions{}
+	template := "theta: %v"
+
+	// type mismatch error
+	assert.Error(t, yaml.Unmarshal([]byte(fmt.Sprintf(template, "\"string\"")), tested))
+	assert.Zero(t, tested.Theta)
+
+	// invalid value range
+	assert.Error(t, yaml.Unmarshal([]byte(fmt.Sprintf(template, 0.5)), tested))
+	assert.Zero(t, tested.Theta)
+
+	// valid change
+	expected := 1.5
+	assert.NoError(t, yaml.Unmarshal([]byte(fmt.Sprintf(template, expected)), tested))
+	assert.Equal(t, expected, tested.Theta)
+
+	// default option check
+	assert.NoError(t, yaml.Unmarshal([]byte("empty: string"), tested))
+	assert.Equal(t, DefaultZipfTheta, tested.Theta)
+}
+
+func TestZipfOptions_MakeRandomizer(t *testing.T) {
+	tested := ZipfOptions{}
 
 	// zipf creation fail
-	tested, err = NewZipf(0, 100, 0.5, 0.5)
-	assert.Nil(t, tested)
+	tested.Theta = 0.5
+	testedV, err := tested.MakeRandomizer(0, 100, 0.5)
+	assert.Nil(t, testedV)
 	assert.EqualError(t, err, fmt.Sprintf("theta value is not acceptable to create zipf random: %v", 0.5))
 
+	tested.Theta = 1.2
+
+	// initialization fail
+	testedV, err = tested.MakeRandomizer(0, 100, -2.0)
+	assert.Nil(t, testedV)
+	assert.EqualError(t, err, fmt.Sprintf("unexpected center range: %v", -2.0))
+
 	// successful creation
-	tested, err = NewZipf(0, 100, 0.5, 1.2)
+	testedV, err = tested.MakeRandomizer(0, 100, 0.5)
 	assert.NotNil(t, tested)
 	assert.NoError(t, err)
 }
