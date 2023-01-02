@@ -140,6 +140,7 @@ func TestOptions_UnmarshalJSON(t *testing.T) {
 	tc["theta"] = 1.2
 	in, _ = json.Marshal(tc)
 	assert.NoError(t, json.Unmarshal(in, tested))
+	assert.Equal(t, ZipfDist, tested.Distribution)
 	assert.NotEqual(t, DefaultCenter, tested.Center)
 	assert.NotEqual(t, DefaultSeed, tested.Seed)
 	assert.NotEqual(t, DefaultDisableHash, tested.DisableHash)

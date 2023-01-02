@@ -3,6 +3,7 @@ package pattern
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sungup/t-fio/pkg/types"
 	"gopkg.in/yaml.v3"
 	"strings"
 )
@@ -77,31 +78,32 @@ func (t *Type) UnmarshalYAML(value *yaml.Node) error {
 }
 
 type Options struct {
-	Type     Type  // IO Pattern Type
-	Offset   int64 // IO block start address
-	PageSize int64 // unit io size
-	IORange  int64 // IO range
+	Type     Type        // IO Pattern Type
+	Offset   types.Bytes // IO block start address
+	PageSize types.Bytes // unit io size
+	IORange  types.Bytes // IO range
 
 	detail detailOptions
 }
 
 const (
-	DefaultOffset   = int64(0)
-	DefaultPageSize = int64(4096) // Default IO page size is 4KB IO
+	DefaultOffset   = types.Bytes(0)
+	DefaultPageSize = types.Bytes(4096)      // Default IO page size is 4KB IO
+	DefaultIORange  = types.Bytes(100 << 20) // Default IO range is 100MB
 )
 
 func (o *Options) UnmarshalJSON(data []byte) (err error) {
 	buffer := struct {
 		Type Type
 
-		// TODO need to change Byte format data structure
-		Offset   int64
-		PageSize int64
-		IORange  int64
+		Offset   types.Bytes `json:"offset"`
+		PageSize types.Bytes `json:"page_size"`
+		IORange  types.Bytes `json:"io_range"`
 	}{
 		Type:     RandomIO,
 		Offset:   DefaultOffset,
 		PageSize: DefaultPageSize,
+		IORange:  DefaultIORange,
 	}
 
 	if err = json.Unmarshal(data, &buffer); err == nil {
@@ -112,6 +114,7 @@ func (o *Options) UnmarshalJSON(data []byte) (err error) {
 			o.Offset = buffer.Offset
 			o.PageSize = buffer.PageSize
 			o.IORange = buffer.IORange
+			o.detail = detail
 		}
 	}
 
@@ -122,14 +125,14 @@ func (o *Options) UnmarshalYAML(value *yaml.Node) (err error) {
 	buffer := struct {
 		Type Type
 
-		// TODO need to change Byte format data structure
-		Offset   int64
-		PageSize int64
-		IORange  int64
+		Offset   types.Bytes `yaml:"offset"`
+		PageSize types.Bytes `yaml:"page_size"`
+		IORange  types.Bytes `yaml:"io_range"`
 	}{
 		Type:     RandomIO,
 		Offset:   DefaultOffset,
 		PageSize: DefaultPageSize,
+		IORange:  DefaultIORange,
 	}
 
 	if err = value.Decode(&buffer); err == nil {
@@ -140,6 +143,7 @@ func (o *Options) UnmarshalYAML(value *yaml.Node) (err error) {
 			o.Offset = buffer.Offset
 			o.PageSize = buffer.PageSize
 			o.IORange = buffer.IORange
+			o.detail = detail
 		}
 	}
 
@@ -149,11 +153,11 @@ func (o *Options) UnmarshalYAML(value *yaml.Node) (err error) {
 func (o *Options) MakeGenerator() (generator *Generator, err error) {
 	var pattern IOPattern
 
-	if pattern, err = o.detail.MakeIOPattern(o.IORange / o.PageSize); err == nil {
+	if pattern, err = o.detail.MakeIOPattern(o.IORange.Int() / o.PageSize.Int()); err == nil {
 		generator = &Generator{
 			pattern:    pattern,
-			pageOffset: o.Offset,
-			pageSz:     o.PageSize,
+			pageOffset: o.Offset.Int(),
+			pageSz:     o.PageSize.Int(),
 		}
 	}
 

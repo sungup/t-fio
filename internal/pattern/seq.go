@@ -15,7 +15,7 @@ func (s *Sequencer) PageNo() int64 {
 }
 
 type SeqOptions struct {
-	StartFrom float64
+	StartFrom float64 `json:"start_from" yaml:"start_from"`
 }
 
 func (s *SeqOptions) MakeIOPattern(nRange int64) (IOPattern, error) {

@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,6 +40,10 @@ func ParseUnit(text string) (size uint64, err error) {
 
 type Bytes uint64
 
+func (b *Bytes) Int() int64 {
+	return int64(*b)
+}
+
 func (b *Bytes) Parse(text string) (err error) {
 	var (
 		number float64
@@ -60,13 +65,34 @@ func (b *Bytes) Parse(text string) (err error) {
 }
 
 func (b *Bytes) String() string {
-	const max = len(unitStr) - 1
-	for i, unit := max, uint64(1)<<max; 0 < i; i, unit = i-1, unit>>10 {
-		if unit < uint64(*b) {
-			number := float64(*b) / float64(unit)
-			return strconv.FormatFloat(number, 'f', 3, 64) + " " + string(unitStr[i-1]) + "iB"
-		}
-	}
+	v, sz := uint64(*b), uint64(1024)
 
-	return "B"
+	if v < sz {
+		return strconv.FormatUint(v, 10) + " B"
+	} else {
+		var i int
+		for ; sz <= v; sz <<= 10 {
+			i++
+		}
+
+		return strconv.FormatFloat(float64(v)/float64(sz>>10), 'f', 3, 64) + " " + string(unitStr[i]) + "iB"
+	}
+}
+
+func (b *Bytes) UnmarshalJSON(data []byte) error {
+	return b.Parse(strings.Trim(string(data), "\""))
+}
+
+func (b *Bytes) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + b.String() + "\""), nil
+}
+
+func (b *Bytes) UnmarshalYAML(value *yaml.Node) error {
+	return b.Parse(value.Value)
+}
+
+// MarshalYAML is different from the MarshalJSON, receiver should be call by value format.
+// GoLang's yaml module cannot call the pointer type receiver to marshal data.
+func (b Bytes) MarshalYAML() (interface{}, error) {
+	return b.String(), nil
 }
