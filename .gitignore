@@ -181,3 +181,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+### other user defined ignore
+coverage-report.html
+gl-sast-report.json
+coverage-report.out

@@ -25,7 +25,7 @@ func init() {
 }
 
 func FillBuffer(buffer []byte, seed int64) {
-	rnd := rand.New(rand.NewSource(seed))
+	rnd := rand.New(rand.NewSource(seed)) // #nosec: G404
 
 	for i := range buffer {
 		buffer[i] = uint8(rnd.Intn(255))
@@ -45,7 +45,7 @@ func fillFile(fp *os.File, size int64) (err error) {
 func OpenTCFile(filename string, size int64) (fp *os.File, closer func(), err error) {
 	tcFilePath := path.Join(os.TempDir(), filename+"-"+time.Now().Format("20060102150405"))
 
-	if fp, err = os.Create(tcFilePath); err == nil {
+	if fp, err = os.Create(path.Clean(tcFilePath)); err == nil {
 		closer = func() {
 			_ = fp.Close()
 			_ = os.Remove(tcFilePath)

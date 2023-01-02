@@ -24,7 +24,7 @@ func (r *core) init(seed int64, nRange uint64, center float64) error {
 	}
 
 	r.nRange = nRange
-	r.rand = rand.New(rand.NewSource(seed))
+	r.rand = rand.New(rand.NewSource(seed)) // #nosec: G404
 	r.randOff = r.rand.Uint64() % nRange
 	r.disableHash = false
 

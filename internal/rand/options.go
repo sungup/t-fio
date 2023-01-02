@@ -1,10 +1,12 @@
 package rand
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"math/rand"
+	"math"
+	"math/big"
 	"strings"
 )
 
@@ -90,8 +92,13 @@ const (
 )
 
 var (
-	DefaultSeed = rand.Int63()
+	DefaultSeed int64
 )
+
+func init() {
+	bigIntRand, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	DefaultSeed = bigIntRand.Int64()
+}
 
 func (o *Options) UnmarshalJSON(data []byte) (err error) {
 	buffer := struct {
