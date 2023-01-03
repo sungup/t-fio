@@ -22,7 +22,7 @@ func TestAsyncWrite(t *testing.T) {
 	}
 
 	// Fail Test, but call back always true
-	a.NoError(AsyncWrite(nil, 0, nil, tcCallback))
+	a.NoError(Write(nil, 0, nil, tcCallback))
 
 	// Success Test
 	tcFile, tcCloser, err := test.OpenTCFile("TestAsyncWrite", tcFileSz)
@@ -34,7 +34,7 @@ func TestAsyncWrite(t *testing.T) {
 	}
 
 	for tcOffset := int64(0); tcOffset < tcFileSz; tcOffset += test.BufferSz {
-		a.NoError(AsyncWrite(tcFile, tcOffset, expectedBuffer, tcSuccessCallback))
+		a.NoError(Write(tcFile, tcOffset, expectedBuffer, tcSuccessCallback))
 	}
 
 	// Flush all written data 100ms after

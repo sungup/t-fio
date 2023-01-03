@@ -1,26 +1,26 @@
 package io
 
 import (
+	"crypto/rand"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/pkg/measure"
 	"github.com/sungup/t-fio/test"
+	"math"
+	"math/big"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
 
-func tcMakeIOStruct(ch chan<- *IO, issue func(*os.File, int64, []byte, func(bool)) error) *IO {
+func tcMakeIOStruct(issue func(*os.File, int64, []byte, func(bool)) error) *IO {
 	tc := &IO{
-		id:      time.Now().UnixNano(),
-		offset:  time.Now().UnixNano(),
-		buffer:  make([]byte, test.BufferSz),
-		next:    nil,
-		success: false,
-		issue:   issue,
-		ch:      ch,
+		jobId:  0,
+		offset: time.Now().UnixNano(),
+		buffer: make([]byte, test.BufferSz),
+		issue:  issue,
 	}
-
-	tc.next = tc // self link to error test
 
 	return tc
 }
@@ -29,44 +29,95 @@ func TestIO_Issue(t *testing.T) {
 	a := assert.New(t)
 
 	var (
-		tested        *IO
-		expectedError          = fmt.Errorf("error data")
-		expectedFP    *os.File = nil
+		tested       *IO
+		expectedFP   *os.File = nil
+		expectedWait          = &sync.WaitGroup{}
+
+		expectedError = fmt.Errorf("error data")
 	)
 
-	tested = tcMakeIOStruct(nil, func(testedFP *os.File, testedOffset int64, testedBuf []byte, testedCB func(success bool)) error {
+	tested = tcMakeIOStruct(func(testedFP *os.File, testedOffset int64, testedBuf []byte, testedCB func(success bool)) error {
 		a.Equal(expectedFP, testedFP)
 		a.Equal(tested.offset, testedOffset)
 		a.Equal(tested.buffer, testedBuf)
+
+		a.Equal(expectedWait, tested.wait)
+		a.NotNil(tested.latency)
 
 		return expectedError
 	})
 
 	// Issue error test
-	next, err := tested.Issue(nil)
-	a.EqualError(err, expectedError.Error())
-	a.Nil(next)
+	a.EqualError(tested.Issue(nil, expectedWait), expectedError.Error())
 
 	// Issue no-error test
 	expectedError = nil
-	next, err = tested.Issue(nil)
-	a.NoError(err)
-	a.Equal(next, tested.next)
+	tested.wait = nil
+	tested.latency = nil
+	a.NoError(tested.Issue(nil, expectedWait))
 }
 
 func TestIO_Callback(t *testing.T) {
-	a := assert.New(t)
 	var (
-		tcChan = make(chan *IO)
-		tcIO   = tcMakeIOStruct(tcChan, nil)
-		tested *IO
+		tcWait  = &sync.WaitGroup{}
+		jobWait = &sync.WaitGroup{}
+		tcSleep = time.Millisecond * 500
+
+		tested = tcMakeIOStruct(nil)
+
+		tcIOLat = make([]func() time.Duration, 10)
 	)
 
 	// True Test
-	for _, expected := range []bool{true, false} {
-		go tcIO.Callback(expected)
-		tested = <-tcChan
-		a.Equal(tcIO, tested)
-		a.Equal(expected, tested.success)
+	totalLat := measure.LatencyMeasureStart()
+	for i := range tcIOLat {
+		jobWait.Add(1)
+		lat := measure.LatencyMeasureStart()
+		go func(lat func() time.Duration) {
+			tested = tcMakeIOStruct(nil)
+			tested.wait = jobWait
+			tested.latency = lat
+			time.Sleep(tcSleep)
+			tested.Callback(true)
+		}(lat)
+		tcIOLat[i] = lat
+	}
+
+	// check all job has been done after tcSleep
+	go func() {
+		tcWait.Add(1)
+		jobWait.Wait()
+		assert.Greater(t, totalLat(), tcSleep)
+		tcWait.Done()
+	}()
+
+	// check each job has been done after tcSleep
+	for _, lat := range tcIOLat {
+		go func(lat func() time.Duration) {
+			tcWait.Add(1)
+			jobWait.Wait()
+			assert.Greater(t, lat(), tcSleep)
+			tcWait.Done()
+		}(lat)
+	}
+
+	// all check thread has been launched in 500msec
+	assert.Less(t, totalLat(), tcSleep)
+
+	tcWait.Wait()
+}
+
+func TestNewIO(t *testing.T) {
+	tcTypes := []Type{SyncRead, AsyncRead, Write}
+
+	for _, tc := range tcTypes {
+		vRand, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+		buffer := make([]byte, 4096)
+		tested := NewIO(tc, vRand.Int64(), vRand.Int64()+1, buffer)
+
+		assert.Equal(t, vRand.Int64(), tested.jobId)
+		assert.Equal(t, vRand.Int64()+1, tested.offset)
+		assert.Equal(t, buffer, tested.buffer)
+		assert.NotNil(t, tested.issue)
 	}
 }

@@ -2,7 +2,7 @@ package io
 
 import "os"
 
-func AsyncWrite(fp *os.File, offset int64, buf []byte, callback func(success bool)) error {
+func Write(fp *os.File, offset int64, buf []byte, callback func(success bool)) error {
 	// Read Sync IO
 	go func() {
 		// TODO add write error handler for the write fail

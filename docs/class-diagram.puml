@@ -1,0 +1,125 @@
+@startuml
+
+namespace io {
+    class IO << (S,Aquamarine) >> {
+        - jobId int64
+        - offset int64
+        - buffer []byte
+        - issue <font color=blue>func</font>(*os.File, int64, []byte, <font color=blue>func</font>(bool) ) error
+        - latency <font color=blue>func</font>() time.Duration
+        - wait *sync.WaitGroup
+
+        + Issue(fp *os.File) error
+        + Callback(success bool)
+    }
+}
+
+namespace pattern {
+    class Generator << (S,Aquamarine) >> {
+        - pattern IOPattern
+        - pageOffset int64
+        - pageSz int64
+
+        + Offset() int64
+
+    }
+    interface IOPattern  {
+        + PageNo() int64
+
+    }
+    class Randomizer << (S,Aquamarine) >> {
+        - rnd rand.Rand
+
+        + PageNo() int64
+
+    }
+    class Sequencer << (S,Aquamarine) >> {
+        - until int64
+        - cursor int64
+
+        + PageNo() int64
+
+    }
+}
+"pattern.IOPattern" <|-- "pattern.Randomizer"
+"pattern.IOPattern" <|-- "pattern.Sequencer"
+"pattern.Generator" o-- "pattern.IOPattern"
+
+namespace rand {
+    interface Rand  {
+        + Uint64() uint64
+        + EnableHash(enable bool) 
+
+    }
+    class Uniform << (S,Aquamarine) >> {
+        + Uint64() uint64
+
+    }
+    class Zipf << (S,Aquamarine) >> {
+        - zipf *rand.Zipf
+
+        + Uint64() uint64
+
+    }
+    class core << (S,Aquamarine) >> {
+        - nRange uint64
+        - rand *rand.Rand
+        - randOff uint64
+        - disableHash bool
+
+        - init(seed int64, nRange uint64, center float64) error
+        - hash(v uint64) uint64
+
+        + EnableHash(enable bool) 
+
+    }
+}
+"rand.Uniform" *-- "rand.core"
+"rand.Zipf" *-- "rand.core"
+"rand.Rand" <|-- "rand.Uniform"
+"rand.Rand" <|-- "rand.Zipf"
+
+namespace transaction {
+    ' Transaction Generator
+    class Job << (S, Aquamarine) >> {
+        - address *pattern.Generator
+
+        - ioFunc func(fp *os.File, offset int64, buf []byte, callback func(success bool)) error
+
+        + MakeTransaction() *Transaction
+    }
+    class Generator << (S, Aquamarine) >> {
+        - jobQueue <font color=blue>chan</font> *Transaction
+        - job []*job
+        - fp *os.File
+
+        + Run()
+    }
+    class Transaction << (S, Aquamarine) >> {
+        - jobId int64
+        - ios []*io.IO
+        - fp *os.File
+
+        + ProcessAll() error
+    }
+}
+"transaction.Generator" *-- "transaction.Job"
+
+namespace worker {
+    /'
+      Each worker run only their own transaction at a time.
+     '/
+    class Worker << (S, Aquamarine) >> {
+        - jobQueue <font color=blue>chan</font> *Transaction
+
+        + Run()
+    }
+}
+
+' Global associations
+"pattern.Randomizer" o-- "rand.Rand"
+"transaction.Transaction" o-- "io.IO"
+"transaction.Job" *-- "pattern.Generator"
+"worker.Worker" "consumer" --- "producer" "transaction.Generator"
+
+@enduml
