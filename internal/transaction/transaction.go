@@ -25,12 +25,12 @@ func (t *Transaction) ProcessAll() (err error) {
 	for _, item := range t.ios {
 		wait.Add(1)
 		if err = item.Issue(t.fp, wait); err != nil {
-			return err
+			break
 		}
 	}
 
 	// wait until all transaction completed
 	wait.Wait()
 
-	return nil
+	return err
 }
