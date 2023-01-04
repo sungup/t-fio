@@ -33,6 +33,6 @@ func (io *IO) Callback(success bool) {
 	io.wait.Done()
 }
 
-func NewIO(ioType Type, jobId, offset int64, buffer []byte) *IO {
+func New(ioType Type, jobId, offset int64, buffer []byte) *IO {
 	return &IO{jobId: jobId, offset: offset, buffer: buffer, issue: ioType}
 }

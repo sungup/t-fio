@@ -101,6 +101,7 @@ namespace transaction {
         - fp *os.File
 
         + ProcessAll() error
+        + AddIO(ioType io.Type, offset int64, buffer[]byte)
     }
 }
 "transaction.Generator" *-- "transaction.Job"
@@ -110,9 +111,9 @@ namespace worker {
       Each worker run only their own transaction at a time.
      '/
     class Worker << (S, Aquamarine) >> {
-        - jobQueue <font color=blue>chan</font> *Transaction
+        - queue <font color=blue>chan</font> *Transaction
 
-        + Run()
+        + Run(ctx context.Context)
     }
 }
 

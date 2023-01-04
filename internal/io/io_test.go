@@ -107,13 +107,13 @@ func TestIO_Callback(t *testing.T) {
 	tcWait.Wait()
 }
 
-func TestNewIO(t *testing.T) {
+func TestNew(t *testing.T) {
 	tcTypes := []Type{SyncRead, AsyncRead, Write}
 
 	for _, tc := range tcTypes {
 		vRand, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 		buffer := make([]byte, 4096)
-		tested := NewIO(tc, vRand.Int64(), vRand.Int64()+1, buffer)
+		tested := New(tc, vRand.Int64(), vRand.Int64()+1, buffer)
 
 		assert.Equal(t, vRand.Int64(), tested.jobId)
 		assert.Equal(t, vRand.Int64()+1, tested.offset)

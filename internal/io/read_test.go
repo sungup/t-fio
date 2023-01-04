@@ -50,7 +50,9 @@ func TestAsyncRead(t *testing.T) {
 
 	testedReadOffset := int64(0)
 	chBlock := make(chan bool)
+	defer func() { close(chBlock) }()
 	chDone := make(chan bool)
+	defer func() { close(chDone) }()
 	tcSuccessCallback := func(success bool) {
 		a.True(success)
 

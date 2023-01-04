@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/sungup/t-fio/internal/io"
 	"github.com/sungup/t-fio/pkg/measure"
+	"github.com/sungup/t-fio/test"
 	"math"
 	"math/big"
 	"os"
@@ -17,7 +18,7 @@ func tcMakeIOList(tcFunc io.Type, jobId int64) []*io.IO {
 	ios := make([]*io.IO, 0)
 
 	for offset := int64(0); offset < (4096 << 3); offset += 4096 {
-		ios = append(ios, io.NewIO(tcFunc, jobId, offset, make([]byte, 4096)))
+		ios = append(ios, io.New(tcFunc, jobId, offset, make([]byte, 4096)))
 	}
 
 	return ios
@@ -31,11 +32,14 @@ func TestTransaction_ProcessAll(t *testing.T) {
 	)
 
 	vRand, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	testFP, testFPClose, _ := test.OpenTCFile("TestTransaction_ProcessAll", 4096)
+	defer testFPClose()
 
-	tested := Transaction{jobId: vRand.Int64()}
+	tested := Transaction{jobId: vRand.Int64(), fp: testFP}
 	testedCounter := 0
 
-	tcSyncIO := func(_ *os.File, _ int64, _ []byte, cb func(bool)) error {
+	tcSyncIO := func(fp *os.File, _ int64, _ []byte, cb func(bool)) error {
+		assert.Equal(t, testFP, fp)
 		if testSleep.Nanoseconds() > 0 {
 			time.Sleep(testSleep)
 		}
@@ -44,7 +48,8 @@ func TestTransaction_ProcessAll(t *testing.T) {
 		return testErr
 	}
 
-	tcAsyncIO := func(_ *os.File, _ int64, _ []byte, cb func(bool)) error {
+	tcAsyncIO := func(fp *os.File, _ int64, _ []byte, cb func(bool)) error {
+		assert.Equal(t, testFP, fp)
 		go func() {
 			if testSleep.Nanoseconds() > 0 {
 				time.Sleep(testSleep)
@@ -91,4 +96,41 @@ func TestTransaction_ProcessAll(t *testing.T) {
 	tested.ios = tcMakeIOList(tcAsyncIO, tested.jobId)
 	assert.EqualError(t, tested.ProcessAll(), errMessage)
 	assert.Equal(t, testedCounter, 1)
+}
+
+func TestTransaction_AddIO(t *testing.T) {
+	tested := &Transaction{
+		jobId: 0,
+		ios:   make([]*io.IO, 0),
+		fp:    nil,
+	}
+
+	tcFunc := func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+
+	for sz := 1; sz <= 1024; sz++ {
+		tested.AddIO(tcFunc, 0, make([]byte, 4096))
+		assert.Len(t, tested.ios, sz)
+	}
+}
+
+func TestNewTransaction(t *testing.T) {
+	const loop = 1000
+	closers := make([]func(), loop)
+	tcFP := make([]*os.File, loop)
+
+	for i := 0; i < loop; i++ {
+		tcFP[i], closers[i], _ = test.OpenTCFile(fmt.Sprintf("TestNewTransaction-%d", i), 4096)
+	}
+	defer func() {
+		for _, closer := range closers {
+			closer()
+		}
+	}()
+
+	for jobId, fp := range tcFP {
+		generated := NewTransaction(int64(jobId), fp)
+
+		assert.Equal(t, int64(jobId), generated.jobId)
+		assert.Equal(t, fp, generated.fp)
+	}
 }
