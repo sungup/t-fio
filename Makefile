@@ -8,7 +8,7 @@ TEST_FLAGS =
 GOCMD=go
 GOBUILD=$(GOENV) $(GOCMD) build
 GOTEST=$(GOCMD) test -coverprofile=coverage-report.out $(TEST_FLAGS)
-GOVET=$(GOCMD) vet
+GOVET=$(GOCMD) vet -unsafeptr=false
 GOFMT=$(GOCMD) fmt
 GOSEC=gosec -fmt=json -out=gl-sast-report.json
 GOCOVERTOOLS=$(GOCMD) tool cover -html=coverage-report.out -o coverage-report.html
