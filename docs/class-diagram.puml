@@ -79,15 +79,26 @@ namespace rand {
 "rand.Rand" <|-- "rand.Uniform"
 "rand.Rand" <|-- "rand.Zipf"
 
+namespace job {
+    class Job << (S, Aquamarine) >> {
+        - fp *os.File
+        - jobId int64
+        - ioType io.Type
+        - ioSize int
+        - address *pattern.Generator
+        - delay time.Duration
+        - trLength int
+        - queue <font color=blue>chan</font> *transaction.Transaction
+
+        - newBuffer <font color=blue>func</font>(sz int) []byte
+
+        + Run(ctx context.Context)
+        + MakeTransaction() *Transaction
+        + TransactionReceiver() <font color=blue>chan</font> *transaction.Transaction
+    }
+}
 namespace transaction {
     ' Transaction Generator
-    class Job << (S, Aquamarine) >> {
-        - address *pattern.Generator
-
-        - ioFunc func(fp *os.File, offset int64, buf []byte, callback func(success bool)) error
-
-        + MakeTransaction() *Transaction
-    }
     class Generator << (S, Aquamarine) >> {
         - jobQueue <font color=blue>chan</font> *Transaction
         - job []*job
@@ -104,14 +115,13 @@ namespace transaction {
         + AddIO(ioType io.Type, offset int64, buffer[]byte)
     }
 }
-"transaction.Generator" *-- "transaction.Job"
 
 namespace worker {
     /'
       Each worker run only their own transaction at a time.
      '/
     class Worker << (S, Aquamarine) >> {
-        - queue <font color=blue>chan</font> *Transaction
+        - queue <font color=blue>chan</font> *transaction.Transaction
 
         + Run(ctx context.Context)
     }
@@ -120,7 +130,7 @@ namespace worker {
 ' Global associations
 "pattern.Randomizer" o-- "rand.Rand"
 "transaction.Transaction" o-- "io.IO"
-"transaction.Job" *-- "pattern.Generator"
+"job.Job" *-- "pattern.Generator"
 "worker.Worker" "consumer" --- "producer" "transaction.Generator"
 
 @enduml

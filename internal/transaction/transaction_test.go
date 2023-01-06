@@ -113,6 +113,22 @@ func TestTransaction_AddIO(t *testing.T) {
 	}
 }
 
+func TestTransaction_IOs(t *testing.T) {
+	tcIOs := make([]*io.IO, 0)
+	tested := &Transaction{
+		jobId: 0,
+		ios:   tcIOs,
+		fp:    nil,
+	}
+
+	tcFunc := func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+
+	for expectedSz := 1; expectedSz <= 1024; expectedSz++ {
+		tcIOs = append(tcIOs, io.New(tcFunc, tested.jobId, 0, make([]byte, 1024)))
+		assert.Equal(t, expectedSz, tested.IOs())
+	}
+}
+
 func TestNewTransaction(t *testing.T) {
 	const loop = 1000
 	closers := make([]func(), loop)

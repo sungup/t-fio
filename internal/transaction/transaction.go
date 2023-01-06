@@ -39,6 +39,10 @@ func (t *Transaction) AddIO(ioType io.Type, offset int64, buffer []byte) {
 	t.ios = append(t.ios, io.New(ioType, t.jobId, offset, buffer))
 }
 
+func (t *Transaction) IOs() int {
+	return len(t.ios)
+}
+
 func NewTransaction(jobId int64, fp *os.File) *Transaction {
 	return &Transaction{jobId: jobId, fp: fp}
 }
