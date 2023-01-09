@@ -17,7 +17,7 @@ type Job struct {
 	address  *pattern.Generator
 	delay    time.Duration
 	trLength int
-	queue    chan *transaction.Transaction
+	buffer   chan *transaction.Transaction
 
 	newBuffer func(size int) []byte
 }
@@ -40,7 +40,7 @@ func (j *Job) Run(ctx context.Context) {
 
 	for {
 		select {
-		case j.queue <- j.newTransaction():
+		case j.buffer <- j.newTransaction():
 		case <-ctx.Done():
 			return
 		}
@@ -48,5 +48,5 @@ func (j *Job) Run(ctx context.Context) {
 }
 
 func (j *Job) TransactionReceiver() <-chan *transaction.Transaction {
-	return j.queue
+	return j.buffer
 }

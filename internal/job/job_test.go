@@ -1,6 +1,7 @@
 package job
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/sungup/t-fio/internal/io"
@@ -40,7 +41,7 @@ func TestJob_newTransaction(t *testing.T) {
 		address:   tcMakePatternGenerator(),
 		delay:     0,
 		trLength:  expectedTRLen,
-		queue:     make(chan *transaction.Transaction, 1),
+		buffer:    make(chan *transaction.Transaction, 1),
 		newBuffer: io.AllocReadBuffer,
 	}
 
@@ -52,39 +53,108 @@ func TestJob_newTransaction(t *testing.T) {
 }
 
 func TestJob_Run(t *testing.T) {
-	assert.Fail(t, "not yet implemented")
+	const loop = 1000
+
+	tested := Job{
+		fp:        nil,
+		jobId:     rand.Int63(),
+		ioType:    func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil },
+		ioSize:    4096,
+		address:   tcMakePatternGenerator(),
+		delay:     0,
+		trLength:  1,
+		buffer:    nil,
+		newBuffer: io.AllocReadBuffer,
+	}
+
+	tcDelay := time.Millisecond * 100
+	tcWaitCancel := time.Millisecond * 10
+	tcDeadline := tcDelay + time.Millisecond*200
+	wg := sync.WaitGroup{}
+
+	// 1. Delay Test
+	tested.delay = tcDelay
+	tested.buffer = make(chan *transaction.Transaction, 1)
+	wg.Add(1)
+	start := time.Now()
+	timeout, cancel := context.WithTimeout(context.Background(), tcDeadline)
+	go func() {
+		tested.Run(timeout)
+		wg.Done()
+	}()
+	cancel()
+	wg.Wait()
+	assert.WithinRange(t, time.Now(), start.Add(tcDelay), start.Add(tcDelay+tcWaitCancel))
+
+	// 1. Normal Test
+	tested.delay = 0
+	tested.buffer = make(chan *transaction.Transaction, 1)
+	wg.Add(1)
+	start = time.Now()
+	timeout, cancel = context.WithTimeout(context.Background(), time.Second)
+	go func() {
+		tested.Run(timeout)
+		wg.Done()
+	}()
+
+	// all transaction should be done until tcDeadline (300msec)
+	for i := 0; i < loop; i++ {
+		assert.IsType(t, &transaction.Transaction{}, <-tested.buffer)
+		assert.WithinRange(t, time.Now(), start, start.Add(tcDeadline))
+	}
+	time.Sleep(tcWaitCancel)
+	assert.NotEmpty(t, tested.buffer)
+	cancel()
+	wg.Wait()
+	assert.WithinRange(t, time.Now(), start, start.Add(tcDeadline))
 }
 
 func TestJob_TransactionReceiver(t *testing.T) {
+	const loop = 1000
+	const deadline = time.Second
 	tcQueue := make(chan *transaction.Transaction, 1)
 	tested := Job{
 		fp:        nil,
 		jobId:     0,
 		ioType:    func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil },
 		ioSize:    1024,
-		address:   nil,
+		address:   tcMakePatternGenerator(),
 		delay:     0,
 		trLength:  4,
-		queue:     tcQueue,
-		newBuffer: nil,
+		buffer:    tcQueue,
+		newBuffer: io.AllocReadBuffer,
 	}
 
 	generated := tested.TransactionReceiver()
 	assert.NotNil(t, generated)
 
+	// Run job creation routine in background to check returned channel is working
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
+	defer cancel()
+	go tested.Run(ctx)
+
+	// Run job receiving test loop times
 	count := 0
 	wait := sync.WaitGroup{}
 	wait.Add(1)
 
 	lat := measure.LatencyMeasureStart()
 	go func(wait *sync.WaitGroup) {
+		defer wait.Done()
+
+		c, closer := context.WithTimeout(context.Background(), deadline)
+		defer closer()
+
 		for {
 			select {
-			case <-generated:
+			case tr := <-generated:
+				assert.IsType(t, &transaction.Transaction{}, tr)
 				count++
-			case <-time.After(time.Millisecond * 100):
-				wait.Done()
-				break
+				if count == loop {
+					return
+				}
+			case <-c.Done():
+				return
 			}
 		}
 
@@ -92,6 +162,6 @@ func TestJob_TransactionReceiver(t *testing.T) {
 
 	wait.Wait()
 
-	t.Log(lat())
-	assert.Fail(t, "not yet implemented")
+	assert.Equal(t, loop, count)
+	assert.Less(t, lat(), deadline)
 }
