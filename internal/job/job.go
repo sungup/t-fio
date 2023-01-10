@@ -10,16 +10,17 @@ import (
 )
 
 type Job struct {
-	fp       *os.File
-	jobId    int64
-	ioType   io.Type
-	ioSize   int
-	address  *pattern.Generator
-	delay    time.Duration
-	trLength int
-	buffer   chan *transaction.Transaction
+	fp       *os.File           // applied by constructor
+	jobId    int64              // automatically assigned
+	ioType   io.Type            // receive from Options
+	ioSize   int                // receive from Options
+	address  *pattern.Generator // created by pattern.Options
+	delay    time.Duration      // receive from Options
+	trLength int                // receive from Options
 
-	newBuffer func(size int) []byte
+	buffer chan *transaction.Transaction // created at construction
+
+	newBuffer func(size int) []byte // selected by ioType
 }
 
 func (j *Job) newTransaction() *transaction.Transaction {
