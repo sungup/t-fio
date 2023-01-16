@@ -5,6 +5,7 @@ import (
 	"github.com/sungup/t-fio/internal/io"
 	"github.com/sungup/t-fio/internal/pattern"
 	"github.com/sungup/t-fio/internal/transaction"
+	"github.com/sungup/t-fio/pkg/bytebuf"
 	"os"
 	"time"
 )
@@ -20,7 +21,7 @@ type Job struct {
 
 	buffer chan *transaction.Transaction // created at construction
 
-	newBuffer func(size int) []byte // selected by ioType
+	newBuffer func(size int) *bytebuf.ByteBuf // selected by ioType
 }
 
 func (j *Job) newTransaction() *transaction.Transaction {

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
 	"github.com/sungup/t-fio/test"
 	"math"
@@ -18,7 +19,7 @@ func tcMakeIOStruct(issue func(*os.File, int64, []byte, func(bool)) error) *IO {
 	tc := &IO{
 		jobId:  0,
 		offset: time.Now().UnixNano(),
-		buffer: make([]byte, test.BufferSz),
+		buffer: bytebuf.Alloc(test.BufferSz),
 		issue:  issue,
 	}
 
@@ -39,13 +40,14 @@ func TestIO_Issue(t *testing.T) {
 	tested = tcMakeIOStruct(func(testedFP *os.File, testedOffset int64, testedBuf []byte, testedCB func(success bool)) error {
 		a.Equal(expectedFP, testedFP)
 		a.Equal(tested.offset, testedOffset)
-		a.Equal(tested.buffer, testedBuf)
+		a.Equal(tested.buffer.Buffer(), testedBuf)
 
 		a.Equal(expectedWait, tested.wait)
 		a.NotNil(tested.latency)
 
 		return expectedError
 	})
+	defer func() { bytebuf.ForceCleanByteBufPool() }()
 
 	// Issue error test
 	a.EqualError(tested.Issue(nil, expectedWait), expectedError.Error())
@@ -67,6 +69,7 @@ func TestIO_Callback(t *testing.T) {
 
 		tcIOLat = make([]func() time.Duration, 10)
 	)
+	defer func() { bytebuf.ForceCleanByteBufPool() }()
 
 	// True Test
 	totalLat := measure.LatencyMeasureStart()
@@ -112,7 +115,7 @@ func TestNew(t *testing.T) {
 
 	for _, tc := range tcTypes {
 		vRand, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
-		buffer := make([]byte, 4096)
+		buffer := bytebuf.Alloc(4096)
 		tested := New(tc, vRand.Int64(), vRand.Int64()+1, buffer)
 
 		assert.Equal(t, vRand.Int64(), tested.jobId)

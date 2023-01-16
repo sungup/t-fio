@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"github.com/sungup/t-fio/internal/io"
+	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
 	"os"
 	"sync"
@@ -35,7 +36,7 @@ func (t *Transaction) ProcessAll() (err error) {
 	return err
 }
 
-func (t *Transaction) AddIO(ioType io.Type, offset int64, buffer []byte) {
+func (t *Transaction) AddIO(ioType io.Type, offset int64, buffer *bytebuf.ByteBuf) {
 	t.ios = append(t.ios, io.New(ioType, t.jobId, offset, buffer))
 }
 

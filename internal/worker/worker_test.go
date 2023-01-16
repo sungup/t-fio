@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/sungup/t-fio/internal/transaction"
+	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
 	"github.com/sungup/t-fio/test"
 	"os"
@@ -26,6 +27,8 @@ func TestWorker_Run(t *testing.T) {
 
 		expectedIssued = int32(loop * ios)
 	)
+
+	defer bytebuf.ForceCleanByteBufPool()
 
 	workers := runtime.NumCPU() >> 1 // use only half of system cpu
 	if workers == 0 {
@@ -63,7 +66,7 @@ func TestWorker_Run(t *testing.T) {
 	for jobId := range tcTransactions {
 		tcTransactions[jobId] = transaction.NewTransaction(int64(jobId), tcFP)
 		for i := 0; i < ios; i++ {
-			tcTransactions[jobId].AddIO(tcIOFunc, int64(i*14), make([]byte, 4096))
+			tcTransactions[jobId].AddIO(tcIOFunc, int64(i*14), bytebuf.Alloc(4096))
 		}
 	}
 

@@ -1,8 +1,8 @@
 package io
 
 import (
-	"github.com/ncw/directio"
 	"github.com/sungup/t-fio/internal/hash"
+	"github.com/sungup/t-fio/pkg/bytebuf"
 	"math/rand"
 	"time"
 	"unsafe"
@@ -67,14 +67,14 @@ func fillRandomBuf64(buffer []byte, seed uint64) {
 	fillRandomBuf8(b, sz-fill, seeds[0])
 }
 
-func AllocReadBuffer(size int) []byte {
-	return directio.AlignedBlock(size)
+func AllocReadBuffer(size int) *bytebuf.ByteBuf {
+	return bytebuf.Alloc(size)
 }
 
-func AllocWriteBuffer(size int) []byte {
-	buffer := directio.AlignedBlock(size)
+func AllocWriteBuffer(size int) *bytebuf.ByteBuf {
+	buffer := bytebuf.Alloc(size)
 
-	fillRandomBuf64(buffer, localRandomizer.Uint64())
+	fillRandomBuf64(buffer.Buffer(), localRandomizer.Uint64())
 
 	return buffer
 }

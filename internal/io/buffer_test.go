@@ -3,6 +3,7 @@ package io
 import (
 	"github.com/ncw/directio"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/pkg/bytebuf"
 	"testing"
 	"time"
 	"unsafe"
@@ -24,6 +25,7 @@ func TestFillRandomBuf64(t *testing.T) {
 }
 
 func TestAllocReadBuffer(t *testing.T) {
+	defer func() { bytebuf.ForceCleanByteBufPool() }()
 	const mallocRange = 1 << 24
 	for i := 0; i < 1000; i++ {
 		sz := 100 + localRandomizer.Intn(mallocRange-100)
@@ -33,7 +35,7 @@ func TestAllocReadBuffer(t *testing.T) {
 		// sampling 100 numbers and make sum of samples
 		sample := int64(0)
 		for s := 0; s < 100; s++ {
-			sample += int64(tested[localRandomizer.Intn(sz)])
+			sample += int64(tested.Buffer()[localRandomizer.Intn(sz)])
 		}
 
 		// sum of all samples should be zero because golang always allocate the zeroing buffer
@@ -42,6 +44,7 @@ func TestAllocReadBuffer(t *testing.T) {
 }
 
 func TestAllocWriteBuffer(t *testing.T) {
+	defer func() { bytebuf.ForceCleanByteBufPool() }()
 	const mallocRange = 1 << 24
 	for i := 0; i < 1000; i++ {
 		sz := 100 + localRandomizer.Intn(mallocRange-100)
@@ -51,7 +54,7 @@ func TestAllocWriteBuffer(t *testing.T) {
 		// sampling 100 numbers and make sum of samples
 		sample := int64(0)
 		for s := 0; s < 100; s++ {
-			sample += int64(tested[localRandomizer.Intn(sz)])
+			sample += int64(tested.Buffer()[localRandomizer.Intn(sz)])
 		}
 		// may be sum of all samples cannot be zero because fillRandomBuf64 fill random values in buffer
 		assert.NotZero(t, sample)
