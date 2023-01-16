@@ -20,25 +20,25 @@ func (b *ByteBuf) Buffer() []byte {
 }
 
 var (
-	pool map[int]*sync.Pool
+	pool sync.Map
 )
 
-func init() {
-	pool = make(map[int]*sync.Pool)
+func newPool(size int) (p *sync.Pool) {
+	p = &sync.Pool{}
+	p.New = func() interface{} { return &ByteBuf{data: directio.AlignedBlock(size), pool: p} }
+	return p
 }
 
 func Alloc(size int) (b *ByteBuf) {
-	p, ok := pool[size]
-	if !ok {
-		p = &sync.Pool{}
-		p.New = func() interface{} { return &ByteBuf{data: directio.AlignedBlock(size), pool: p} }
-		pool[size] = p
-	}
+	v, _ := pool.LoadOrStore(size, newPool(size))
 
-	return p.Get().(*ByteBuf)
+	return v.(*sync.Pool).Get().(*ByteBuf)
 }
 
 func ForceCleanByteBufPool() {
-	pool = make(map[int]*sync.Pool)
+	pool.Range(func(k, _ any) bool {
+		pool.Delete(k)
+		return true
+	})
 	runtime.GC()
 }

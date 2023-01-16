@@ -21,10 +21,7 @@ func TestByteBuf_Close(t *testing.T) {
 }
 
 func TestByteBuf_Buffer(t *testing.T) {
-	defer func() {
-		pool = make(map[int]*sync.Pool)
-		runtime.GC()
-	}()
+	defer func() { ForceCleanByteBufPool() }()
 	const loop = 100
 	for i := 1; i <= loop; i++ {
 		tested := Alloc(i)
@@ -34,12 +31,19 @@ func TestByteBuf_Buffer(t *testing.T) {
 	}
 }
 
-func BenchmarkAlloc(b *testing.B) {
-	defer func() {
-		pool = make(map[int]*sync.Pool)
-		runtime.GC()
-	}()
+func TestNewPool(t *testing.T) {
+	const loop = 1024
+	for expectedSz := 1; expectedSz <= loop; expectedSz++ {
+		tested := newPool(expectedSz)
+		generated := tested.Get().(*ByteBuf)
+		assert.Len(t, generated.data, expectedSz)
+		assert.Equal(t, generated.pool, tested)
+		tested.Put(generated)
+	}
+}
 
+func BenchmarkAlloc(b *testing.B) {
+	defer func() { ForceCleanByteBufPool() }()
 	const loop = 1000000
 	const size = 128 << 10
 
@@ -67,15 +71,20 @@ func BenchmarkAlloc(b *testing.B) {
 }
 
 func TestAlloc(t *testing.T) {
-	defer func() {
-		pool = make(map[int]*sync.Pool)
-		runtime.GC()
-	}()
+	defer func() { ForceCleanByteBufPool() }()
 	const loop = 100
 	for i := 1; i <= loop; i++ {
 		generated := Alloc(i)
 		assert.NotNil(t, generated)
-		assert.Len(t, pool, i)
+		cnt := 0
+
+		pool.Range(func(k, _ any) bool {
+			assert.LessOrEqual(t, k, i)
+			cnt++
+			return true
+		})
+
+		assert.Equal(t, cnt, i)
 	}
 }
 
@@ -103,6 +112,11 @@ func TestForceCleanByteBufPool(t *testing.T) {
 	runtime.ReadMemStats(memStat)
 	after = memStat.HeapObjects
 
-	assert.Empty(t, pool)
+	cnt := 0
+	pool.Range(func(_, _ any) bool {
+		cnt++
+		return true
+	})
+	assert.Zero(t, cnt)
 	assert.Greater(t, before, after)
 }

@@ -87,8 +87,8 @@ func TestIO_Callback(t *testing.T) {
 	}
 
 	// check all job has been done after tcSleep
+	tcWait.Add(1)
 	go func() {
-		tcWait.Add(1)
 		jobWait.Wait()
 		assert.Greater(t, totalLat(), tcSleep)
 		tcWait.Done()
@@ -96,8 +96,8 @@ func TestIO_Callback(t *testing.T) {
 
 	// check each job has been done after tcSleep
 	for _, lat := range tcIOLat {
+		tcWait.Add(1)
 		go func(lat func() time.Duration) {
-			tcWait.Add(1)
 			jobWait.Wait()
 			assert.Greater(t, lat(), tcSleep)
 			tcWait.Done()
@@ -108,6 +108,7 @@ func TestIO_Callback(t *testing.T) {
 	assert.Less(t, totalLat(), tcSleep)
 
 	tcWait.Wait()
+	assert.Greater(t, totalLat(), tcSleep)
 }
 
 func TestNew(t *testing.T) {
