@@ -18,9 +18,11 @@ const (
 var (
 	prime = []uint64{1, 2, 3, 5, 7, 11, 13, 17,
 		19, 23, 29, 31, 37, 41, 43, 47}
-
-	localRandomizer = rand.New(rand.NewSource(time.Now().UnixNano())) // #nosec G404
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 // #nosec G103
 func fillRandomBuf8(b, sz uintptr, seed uint64) {
@@ -74,7 +76,8 @@ func AllocReadBuffer(size int) *bytebuf.ByteBuf {
 func AllocWriteBuffer(size int) *bytebuf.ByteBuf {
 	buffer := bytebuf.Alloc(size)
 
-	fillRandomBuf64(buffer.Buffer(), localRandomizer.Uint64())
+	// #nosec G404 ignore weak-random-generator because this is not effects to generate uniform random number
+	fillRandomBuf64(buffer.Buffer(), rand.Uint64())
 
 	return buffer
 }

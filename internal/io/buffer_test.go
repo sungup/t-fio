@@ -4,6 +4,7 @@ import (
 	"github.com/ncw/directio"
 	"github.com/stretchr/testify/assert"
 	"github.com/sungup/t-fio/pkg/bytebuf"
+	"math/rand"
 	"testing"
 	"time"
 	"unsafe"
@@ -28,14 +29,14 @@ func TestAllocReadBuffer(t *testing.T) {
 	defer func() { bytebuf.ForceCleanByteBufPool() }()
 	const mallocRange = 1 << 24
 	for i := 0; i < 1000; i++ {
-		sz := 100 + localRandomizer.Intn(mallocRange-100)
+		sz := 100 + rand.Intn(mallocRange-100)
 		tested := AllocReadBuffer(sz)
 		assert.NotNil(t, tested)
 
 		// sampling 100 numbers and make sum of samples
 		sample := int64(0)
 		for s := 0; s < 100; s++ {
-			sample += int64(tested.Buffer()[localRandomizer.Intn(sz)])
+			sample += int64(tested.Buffer()[rand.Intn(sz)])
 		}
 
 		// sum of all samples should be zero because golang always allocate the zeroing buffer
@@ -47,14 +48,14 @@ func TestAllocWriteBuffer(t *testing.T) {
 	defer func() { bytebuf.ForceCleanByteBufPool() }()
 	const mallocRange = 1 << 24
 	for i := 0; i < 1000; i++ {
-		sz := 100 + localRandomizer.Intn(mallocRange-100)
+		sz := 100 + rand.Intn(mallocRange-100)
 		tested := AllocWriteBuffer(sz)
 		assert.NotNil(t, tested)
 
 		// sampling 100 numbers and make sum of samples
 		sample := int64(0)
 		for s := 0; s < 100; s++ {
-			sample += int64(tested.Buffer()[localRandomizer.Intn(sz)])
+			sample += int64(tested.Buffer()[rand.Intn(sz)])
 		}
 		// may be sum of all samples cannot be zero because fillRandomBuf64 fill random values in buffer
 		assert.NotZero(t, sample)
@@ -68,12 +69,12 @@ func BenchmarkFillRandomBuf64(b *testing.B) {
 
 	b.Run("fillRandomBuf8", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			fillRandomBuf8(uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), localRandomizer.Uint64())
+			fillRandomBuf8(uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), rand.Uint64())
 		}
 	})
 	b.Run("fillRandomBuf64", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			fillRandomBuf64(buffer, localRandomizer.Uint64())
+			fillRandomBuf64(buffer, rand.Uint64())
 		}
 	})
 }
