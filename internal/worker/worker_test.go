@@ -6,8 +6,8 @@ import (
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
+	"github.com/sungup/t-fio/pkg/sys"
 	"github.com/sungup/t-fio/test"
-	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -51,7 +51,7 @@ func TestWorker_Run(t *testing.T) {
 	testedIssued := int32(0)
 
 	// make transaction data
-	tcIOFunc := func(_ *os.File, _ int64, _ []byte, cb func(bool)) error {
+	tcIOFunc := func(_ sys.File, _ int64, _ []byte, cb func(bool)) error {
 		go func() {
 			time.Sleep(sleep)
 			atomic.AddInt32(&testedIssued, 1)

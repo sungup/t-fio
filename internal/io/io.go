@@ -3,7 +3,7 @@ package io
 import (
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
-	"os"
+	"github.com/sungup/t-fio/pkg/sys"
 	"sync"
 	"time"
 )
@@ -13,13 +13,13 @@ type IO struct {
 	offset int64            // byte unit io position
 	buffer *bytebuf.ByteBuf // it should be aligned block
 
-	issue   func(fp *os.File, offset int64, buf []byte, callback func(success bool)) (err error)
+	issue   func(fp sys.File, offset int64, buf []byte, callback func(success bool)) (err error)
 	latency func() time.Duration
 
 	wait *sync.WaitGroup
 }
 
-func (io *IO) Issue(fp *os.File, wait *sync.WaitGroup) error {
+func (io *IO) Issue(fp sys.File, wait *sync.WaitGroup) error {
 	io.wait = wait
 	io.latency = measure.LatencyMeasureStart()
 	return io.issue(fp, io.offset, io.buffer.Buffer(), io.Callback)

@@ -4,14 +4,14 @@ import (
 	"github.com/sungup/t-fio/internal/io"
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
-	"os"
+	"github.com/sungup/t-fio/pkg/sys"
 	"sync"
 )
 
 type Transaction struct {
 	jobId int64
 	ios   []*io.IO
-	fp    *os.File
+	fp    sys.File
 }
 
 func (t *Transaction) ProcessAll() (err error) {
@@ -44,6 +44,6 @@ func (t *Transaction) IOs() int {
 	return len(t.ios)
 }
 
-func NewTransaction(jobId int64, fp *os.File) *Transaction {
+func NewTransaction(jobId int64, fp sys.File) *Transaction {
 	return &Transaction{jobId: jobId, fp: fp}
 }

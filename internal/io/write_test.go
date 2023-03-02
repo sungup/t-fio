@@ -22,7 +22,7 @@ func TestAsyncWrite(t *testing.T) {
 	}
 
 	// Fail Test, but call back always true
-	a.NoError(Write(nil, 0, nil, tcCallback))
+	a.Error(Write(nil, 0, nil, tcCallback))
 
 	// Success Test
 	tcFile, tcCloser, err := test.OpenTCFile("TestAsyncWrite", tcFileSz)

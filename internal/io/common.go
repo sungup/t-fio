@@ -2,12 +2,12 @@ package io
 
 import (
 	"fmt"
+	"github.com/sungup/t-fio/pkg/sys"
 	"gopkg.in/yaml.v3"
-	"os"
 	"strings"
 )
 
-type Type func(_ *os.File, _ int64, _ []byte, _ func(bool)) error
+type Type func(_ sys.File, _ int64, _ []byte, _ func(bool)) error
 
 func parseType(str string) (Type, error) {
 	switch strings.ToLower(strings.TrimSpace(str)) {

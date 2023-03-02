@@ -8,8 +8,8 @@ import (
 	"github.com/sungup/t-fio/internal/pattern"
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/measure"
+	"github.com/sungup/t-fio/pkg/sys"
 	"math/rand"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -29,7 +29,7 @@ func TestJob_newTransaction(t *testing.T) {
 	const loop = 1000
 	var (
 		expectedJobId  = rand.Int63()
-		expectedIoType = func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+		expectedIoType = func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil }
 		expectedTRLen  = 16
 	)
 
@@ -58,7 +58,7 @@ func TestJob_Run(t *testing.T) {
 	tested := Job{
 		fp:        nil,
 		jobId:     rand.Int63(),
-		ioType:    func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil },
+		ioType:    func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil },
 		ioSize:    4096,
 		address:   tcMakePatternGenerator(),
 		delay:     0,
@@ -116,7 +116,7 @@ func TestJob_TransactionReceiver(t *testing.T) {
 	tested := Job{
 		fp:        nil,
 		jobId:     0,
-		ioType:    func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil },
+		ioType:    func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil },
 		ioSize:    1024,
 		address:   tcMakePatternGenerator(),
 		delay:     0,

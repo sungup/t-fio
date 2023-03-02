@@ -6,12 +6,12 @@ import (
 	"github.com/sungup/t-fio/internal/pattern"
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/bytebuf"
-	"os"
+	"github.com/sungup/t-fio/pkg/sys"
 	"time"
 )
 
 type Job struct {
-	fp       *os.File           // applied by constructor
+	fp       sys.File           // applied by constructor
 	jobId    int64              // automatically assigned
 	ioType   io.Type            // receive from Options
 	ioSize   int                // receive from Options

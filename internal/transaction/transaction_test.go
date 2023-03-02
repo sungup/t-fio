@@ -7,6 +7,7 @@ import (
 	"github.com/sungup/t-fio/internal/io"
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
+	"github.com/sungup/t-fio/pkg/sys"
 	"github.com/sungup/t-fio/test"
 	"math"
 	"math/big"
@@ -40,7 +41,7 @@ func TestTransaction_ProcessAll(t *testing.T) {
 	tested := Transaction{jobId: vRand.Int64(), fp: testFP}
 	testedCounter := 0
 
-	tcSyncIO := func(fp *os.File, _ int64, _ []byte, cb func(bool)) error {
+	tcSyncIO := func(fp sys.File, _ int64, _ []byte, cb func(bool)) error {
 		assert.Equal(t, testFP, fp)
 		if testSleep.Nanoseconds() > 0 {
 			time.Sleep(testSleep)
@@ -50,7 +51,7 @@ func TestTransaction_ProcessAll(t *testing.T) {
 		return testErr
 	}
 
-	tcAsyncIO := func(fp *os.File, _ int64, _ []byte, cb func(bool)) error {
+	tcAsyncIO := func(fp sys.File, _ int64, _ []byte, cb func(bool)) error {
 		assert.Equal(t, testFP, fp)
 		go func() {
 			if testSleep.Nanoseconds() > 0 {
@@ -111,7 +112,7 @@ func TestTransaction_AddIO(t *testing.T) {
 		fp:    nil,
 	}
 
-	tcFunc := func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+	tcFunc := func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil }
 
 	for sz := 1; sz <= 1024; sz++ {
 		tested.AddIO(tcFunc, 0, bytebuf.Alloc(4096))
@@ -128,7 +129,7 @@ func TestTransaction_IOs(t *testing.T) {
 		fp:    nil,
 	}
 
-	tcFunc := func(_ *os.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+	tcFunc := func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil }
 
 	for expectedSz := 1; expectedSz <= 1024; expectedSz++ {
 		tested.ios = append(tested.ios, io.New(tcFunc, tested.jobId, 0, bytebuf.Alloc(1024)))

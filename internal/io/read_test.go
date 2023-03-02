@@ -14,7 +14,7 @@ func TestSyncRead(t *testing.T) {
 		a.False(success)
 	}
 
-	a.Error(SyncRead(nil, 0, nil, tcFailedCallback))
+	a.Panics(func() { _ = SyncRead(nil, 0, nil, tcFailedCallback) })
 
 	// Success Test
 	tcFile, tcCloser, err := test.OpenTCFile("TestSyncRead", tcFileSz)
@@ -41,7 +41,7 @@ func TestAsyncRead(t *testing.T) {
 		a.False(success)
 	}
 
-	a.NoError(AsyncRead(nil, 0, nil, tcFailedCallback))
+	a.Error(AsyncRead(nil, 0, nil, tcFailedCallback))
 
 	// Success Test
 	tcFile, tcCloser, err := test.OpenTCFile("TestAsyncRead", tcFileSz)

@@ -6,16 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
+	"github.com/sungup/t-fio/pkg/sys"
 	"github.com/sungup/t-fio/test"
 	"math"
 	"math/big"
-	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
-func tcMakeIOStruct(issue func(*os.File, int64, []byte, func(bool)) error) *IO {
+func tcMakeIOStruct(issue func(sys.File, int64, []byte, func(bool)) error) *IO {
 	tc := &IO{
 		jobId:  0,
 		offset: time.Now().UnixNano(),
@@ -31,13 +31,13 @@ func TestIO_Issue(t *testing.T) {
 
 	var (
 		tested       *IO
-		expectedFP   *os.File = nil
+		expectedFP   sys.File = nil
 		expectedWait          = &sync.WaitGroup{}
 
 		expectedError = fmt.Errorf("error data")
 	)
 
-	tested = tcMakeIOStruct(func(testedFP *os.File, testedOffset int64, testedBuf []byte, testedCB func(success bool)) error {
+	tested = tcMakeIOStruct(func(testedFP sys.File, testedOffset int64, testedBuf []byte, testedCB func(success bool)) error {
 		a.Equal(expectedFP, testedFP)
 		a.Equal(tested.offset, testedOffset)
 		a.Equal(tested.buffer.Buffer(), testedBuf)
