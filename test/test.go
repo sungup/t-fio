@@ -77,3 +77,8 @@ type AtomicCounter int32
 func (c *AtomicCounter) Add(delta int32) { atomic.AddInt32((*int32)(c), delta) }
 func (c *AtomicCounter) Done()           { c.Add(-1) }
 func (c *AtomicCounter) Len() int32      { return atomic.LoadInt32((*int32)(c)) }
+func (c *AtomicCounter) Wait() {
+	for c.Len() > 0 {
+		time.Sleep(time.Millisecond)
+	}
+}

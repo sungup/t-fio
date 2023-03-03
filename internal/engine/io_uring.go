@@ -9,17 +9,18 @@ import (
 	"os"
 )
 
-type IOUring struct {
-	fd    *os.File
+type IOURing struct {
+	fp    *os.File
 	uring *iouring.IOURing
 
-	ch chan iouring.Result
+	ch  chan iouring.Result
+	ctx context.Context
 
 	handlerCount int
 }
 
-func (f *IOUring) ReadAt(p []byte, offset int64, callback Callback) (err error) {
-	prepReq := iouring.Pread(int(f.fd.Fd()), p, uint64(offset)).WithCallback(func(result iouring.Result) error {
+func (f *IOURing) ReadAt(p []byte, offset int64, callback Callback) (err error) {
+	prepReq := iouring.Pread(int(f.fp.Fd()), p, uint64(offset)).WithCallback(func(result iouring.Result) error {
 		n, e := result.ReturnInt()
 		callback(n, e)
 		return e
@@ -27,11 +28,11 @@ func (f *IOUring) ReadAt(p []byte, offset int64, callback Callback) (err error) 
 
 	_, err = f.uring.SubmitRequest(prepReq, f.ch)
 
-	return
+	return err
 }
 
-func (f *IOUring) WriteAt(p []byte, offset int64, callback Callback) (err error) {
-	prepReq := iouring.Pwrite(int(f.fd.Fd()), p, uint64(offset)).WithCallback(func(result iouring.Result) error {
+func (f *IOURing) WriteAt(p []byte, offset int64, callback Callback) (err error) {
+	prepReq := iouring.Pwrite(int(f.fp.Fd()), p, uint64(offset)).WithCallback(func(result iouring.Result) error {
 		n, e := result.ReturnInt()
 		callback(n, e)
 		return e
@@ -39,18 +40,20 @@ func (f *IOUring) WriteAt(p []byte, offset int64, callback Callback) (err error)
 
 	_, err = f.uring.SubmitRequest(prepReq, f.ch)
 
-	return
+	return err
 }
 
-func (f *IOUring) Close() (err error) {
+func (f *IOURing) Close() (err error) {
+	f.ctx.Done()
+
 	if err = f.uring.Close(); err == nil {
-		err = f.fd.Close()
+		err = f.fp.Close()
 	}
 
-	return
+	return err
 }
 
-func (f *IOUring) runResultHandler(ctx context.Context) {
+func (f *IOURing) runResultHandler() {
 	for i := 0; i < f.handlerCount; i++ {
 		// start handling routines
 		go func(ch <-chan iouring.Result) {
@@ -58,7 +61,7 @@ func (f *IOUring) runResultHandler(ctx context.Context) {
 				select {
 				case result := <-ch:
 					_ = result.Callback()
-				case <-ctx.Done():
+				case <-f.ctx.Done():
 					return
 				}
 			}
