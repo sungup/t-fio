@@ -2,10 +2,13 @@ package io
 
 import (
 	"fmt"
+	"github.com/sungup/t-fio/internal/engine"
 	"github.com/sungup/t-fio/pkg/sys"
 	"gopkg.in/yaml.v3"
 	"strings"
 )
+
+type DoIO func(p []byte, offset int64, callback engine.Callback) (err error)
 
 type Type func(_ sys.File, _ int64, _ []byte, _ func(bool)) error
 

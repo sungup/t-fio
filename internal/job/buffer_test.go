@@ -1,4 +1,4 @@
-package io
+package job
 
 import (
 	"github.com/ncw/directio"

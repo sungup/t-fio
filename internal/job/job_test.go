@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	"github.com/sungup/t-fio/internal/io"
 	"github.com/sungup/t-fio/internal/pattern"
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/measure"
@@ -42,7 +41,7 @@ func TestJob_newTransaction(t *testing.T) {
 		delay:     0,
 		trLength:  expectedTRLen,
 		buffer:    make(chan *transaction.Transaction, 1),
-		newBuffer: io.AllocReadBuffer,
+		newBuffer: AllocReadBuffer,
 	}
 
 	for i := 0; i < loop; i++ {
@@ -64,7 +63,7 @@ func TestJob_Run(t *testing.T) {
 		delay:     0,
 		trLength:  1,
 		buffer:    nil,
-		newBuffer: io.AllocReadBuffer,
+		newBuffer: AllocReadBuffer,
 	}
 
 	tcDelay := time.Millisecond * 100
@@ -122,7 +121,7 @@ func TestJob_TransactionReceiver(t *testing.T) {
 		delay:     0,
 		trLength:  4,
 		buffer:    tcQueue,
-		newBuffer: io.AllocReadBuffer,
+		newBuffer: AllocReadBuffer,
 	}
 
 	generated := tested.TransactionReceiver()
