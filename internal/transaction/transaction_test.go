@@ -4,19 +4,18 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/internal/engine"
 	"github.com/sungup/t-fio/internal/io"
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
-	"github.com/sungup/t-fio/pkg/sys"
 	"github.com/sungup/t-fio/test"
 	"math"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 )
 
-func tcMakeIOList(tcFunc io.Type, jobId int64) (list []*io.IO, closer func()) {
+func tcMakeIOList(tcFunc engine.DoIO, jobId int64) (list []*io.IO, closer func()) {
 	ios := make([]*io.IO, 0)
 
 	for offset := int64(0); offset < (4096 << 3); offset += 4096 {
@@ -35,30 +34,26 @@ func TestTransaction_ProcessAll(t *testing.T) {
 	)
 
 	vRand, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
-	testFP, testFPClose, _ := test.OpenTCFile("TestTransaction_ProcessAll", 4096)
-	defer testFPClose()
 
-	tested := Transaction{jobId: vRand.Int64(), fp: testFP}
+	tested := Transaction{jobId: vRand.Int64()}
 	testedCounter := 0
 
-	tcSyncIO := func(fp sys.File, _ int64, _ []byte, cb func(bool)) error {
-		assert.Equal(t, testFP, fp)
+	tcSyncIO := func(_ []byte, _ int64, cb engine.Callback) error {
 		if testSleep.Nanoseconds() > 0 {
 			time.Sleep(testSleep)
 		}
 		testedCounter++
-		cb(testErr == nil)
+		cb(test.BufferSz, nil)
 		return testErr
 	}
 
-	tcAsyncIO := func(fp sys.File, _ int64, _ []byte, cb func(bool)) error {
-		assert.Equal(t, testFP, fp)
+	tcAsyncIO := func(_ []byte, _ int64, cb engine.Callback) error {
 		go func() {
 			if testSleep.Nanoseconds() > 0 {
 				time.Sleep(testSleep)
 			}
 			testedCounter++
-			cb(testErr == nil)
+			cb(test.BufferSz, nil)
 		}()
 		return testErr
 	}
@@ -109,10 +104,9 @@ func TestTransaction_AddIO(t *testing.T) {
 	tested := &Transaction{
 		jobId: 0,
 		ios:   make([]*io.IO, 0),
-		fp:    nil,
 	}
 
-	tcFunc := func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+	tcFunc := func(_ []byte, _ int64, _ engine.Callback) (err error) { return nil }
 
 	for sz := 1; sz <= 1024; sz++ {
 		tested.AddIO(tcFunc, 0, bytebuf.Alloc(4096))
@@ -126,10 +120,9 @@ func TestTransaction_IOs(t *testing.T) {
 	tested := &Transaction{
 		jobId: 0,
 		ios:   make([]*io.IO, 0),
-		fp:    nil,
 	}
 
-	tcFunc := func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil }
+	tcFunc := func(p []byte, offset int64, callback engine.Callback) (err error) { return nil }
 
 	for expectedSz := 1; expectedSz <= 1024; expectedSz++ {
 		tested.ios = append(tested.ios, io.New(tcFunc, tested.jobId, 0, bytebuf.Alloc(1024)))
@@ -141,22 +134,10 @@ func TestTransaction_IOs(t *testing.T) {
 
 func TestNewTransaction(t *testing.T) {
 	const loop = 1000
-	closers := make([]func(), loop)
-	tcFP := make([]*os.File, loop)
 
-	for i := 0; i < loop; i++ {
-		tcFP[i], closers[i], _ = test.OpenTCFile(fmt.Sprintf("TestNewTransaction-%d", i), 4096)
-	}
-	defer func() {
-		for _, closer := range closers {
-			closer()
-		}
-	}()
-
-	for jobId, fp := range tcFP {
-		generated := NewTransaction(int64(jobId), fp)
-
+	for jobId := 0; jobId < loop; jobId++ {
+		generated := NewTransaction(int64(jobId))
 		assert.Equal(t, int64(jobId), generated.jobId)
-		assert.Equal(t, fp, generated.fp)
+		assert.Empty(t, generated.ios)
 	}
 }

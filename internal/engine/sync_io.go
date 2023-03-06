@@ -22,6 +22,10 @@ func (f *SyncIO) WriteAt(p []byte, offset int64, callback Callback) (err error) 
 	return e
 }
 
+func (f *SyncIO) GetIOFunc(ioType IOType) (io DoIO, err error) {
+	return getIOFunc(f, ioType)
+}
+
 func (f *SyncIO) Close() (err error) {
 	return f.fp.Close()
 }

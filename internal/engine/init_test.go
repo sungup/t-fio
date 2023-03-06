@@ -10,6 +10,8 @@ import (
 const (
 	tcFileSz = test.BufferSz * 1024
 	tcDelay  = time.Microsecond * 50
+
+	UnsupportedType = IOType(Write + 1)
 )
 
 func makeFailedCallback(t *testing.T, cnt *test.AtomicCounter) Callback {

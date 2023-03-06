@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/internal/engine"
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/bytebuf"
 	"github.com/sungup/t-fio/pkg/measure"
-	"github.com/sungup/t-fio/pkg/sys"
 	"github.com/sungup/t-fio/test"
 	"runtime"
 	"sync"
@@ -51,20 +51,18 @@ func TestWorker_Run(t *testing.T) {
 	testedIssued := int32(0)
 
 	// make transaction data
-	tcIOFunc := func(_ sys.File, _ int64, _ []byte, cb func(bool)) error {
+	tcIOFunc := func(_ []byte, _ int64, cb engine.Callback) error {
 		go func() {
 			time.Sleep(sleep)
 			atomic.AddInt32(&testedIssued, 1)
-			cb(true)
+			cb(test.BufferSz, nil)
 		}()
 
 		return nil
 	}
-	tcFP, closer, _ := test.OpenTCFile("TestWorker_Run", 10<<20)
-	defer closer()
 	tcTransactions := make([]*transaction.Transaction, loop)
 	for jobId := range tcTransactions {
-		tcTransactions[jobId] = transaction.NewTransaction(int64(jobId), tcFP)
+		tcTransactions[jobId] = transaction.NewTransaction(int64(jobId))
 		for i := 0; i < ios; i++ {
 			tcTransactions[jobId].AddIO(tcIOFunc, int64(i*14), bytebuf.Alloc(4096))
 		}

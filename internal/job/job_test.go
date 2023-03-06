@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/internal/engine"
 	"github.com/sungup/t-fio/internal/pattern"
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/measure"
-	"github.com/sungup/t-fio/pkg/sys"
+	"github.com/sungup/t-fio/test"
 	"math/rand"
 	"sync"
 	"testing"
@@ -28,18 +29,17 @@ func TestJob_newTransaction(t *testing.T) {
 	const loop = 1000
 	var (
 		expectedJobId  = rand.Int63()
-		expectedIoType = func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil }
-		expectedTRLen  = 16
+		expectedIoFunc = func(_ []byte, _ int64, _ engine.Callback) error { return nil }
+		expectedTrLen  = 16
 	)
 
 	tested := Job{
-		fp:        nil,
 		jobId:     expectedJobId,
-		ioType:    expectedIoType,
-		ioSize:    4096,
+		ioFunc:    expectedIoFunc,
+		ioSize:    test.BufferSz,
 		address:   tcMakePatternGenerator(),
 		delay:     0,
-		trLength:  expectedTRLen,
+		trLength:  expectedTrLen,
 		buffer:    make(chan *transaction.Transaction, 1),
 		newBuffer: AllocReadBuffer,
 	}
@@ -47,7 +47,7 @@ func TestJob_newTransaction(t *testing.T) {
 	for i := 0; i < loop; i++ {
 		generated := tested.newTransaction()
 		assert.NotNil(t, generated)
-		assert.Equal(t, expectedTRLen, generated.IOs())
+		assert.Equal(t, expectedTrLen, generated.IOs())
 	}
 }
 
@@ -55,9 +55,8 @@ func TestJob_Run(t *testing.T) {
 	const loop = 1000
 
 	tested := Job{
-		fp:        nil,
 		jobId:     rand.Int63(),
-		ioType:    func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil },
+		ioFunc:    func(_ []byte, _ int64, _ engine.Callback) error { return nil },
 		ioSize:    4096,
 		address:   tcMakePatternGenerator(),
 		delay:     0,
@@ -113,9 +112,8 @@ func TestJob_TransactionReceiver(t *testing.T) {
 	const deadline = time.Second
 	tcQueue := make(chan *transaction.Transaction, 1)
 	tested := Job{
-		fp:        nil,
 		jobId:     0,
-		ioType:    func(_ sys.File, _ int64, _ []byte, _ func(bool)) error { return nil },
+		ioFunc:    func(_ []byte, _ int64, _ engine.Callback) error { return nil },
 		ioSize:    1024,
 		address:   tcMakePatternGenerator(),
 		delay:     0,

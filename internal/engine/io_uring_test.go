@@ -126,6 +126,27 @@ func TestIOUring_WriteAt(t *testing.T) {
 
 }
 
+func TestIOURing_GetIOFunc(t *testing.T) {
+	var (
+		generated DoIO
+		err       error
+
+		tested = IOURing{}
+	)
+
+	generated, err = tested.GetIOFunc(Read)
+	assert.NotNil(t, generated)
+	assert.NoError(t, err)
+
+	generated, err = tested.GetIOFunc(Write)
+	assert.NotNil(t, generated)
+	assert.NoError(t, err)
+
+	generated, err = tested.GetIOFunc(UnsupportedType)
+	assert.Nil(t, generated)
+	assert.Error(t, err)
+}
+
 func TestIOUring_Close(t *testing.T) {
 	tcFile, tcCloser, err := test.OpenTCFile("TestIOUring_Close", tcFileSz)
 	assert.NoError(t, err)

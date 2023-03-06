@@ -2,18 +2,18 @@ package job
 
 import (
 	"context"
-	"github.com/sungup/t-fio/internal/io"
+	"github.com/sungup/t-fio/internal/engine"
 	"github.com/sungup/t-fio/internal/pattern"
 	"github.com/sungup/t-fio/internal/transaction"
 	"github.com/sungup/t-fio/pkg/bytebuf"
-	"github.com/sungup/t-fio/pkg/sys"
 	"time"
 )
 
 type Job struct {
-	fp       sys.File           // applied by constructor
+	ioEngine engine.Engine // io engine
+	ioFunc   engine.DoIO
+
 	jobId    int64              // automatically assigned
-	ioType   io.Type            // receive from Options
 	ioSize   int                // receive from Options
 	address  *pattern.Generator // created by pattern.Options
 	delay    time.Duration      // receive from Options
@@ -25,10 +25,10 @@ type Job struct {
 }
 
 func (j *Job) newTransaction() *transaction.Transaction {
-	tr := transaction.NewTransaction(j.jobId, j.fp)
+	tr := transaction.NewTransaction(j.jobId)
 
 	for i := 0; i < j.trLength; i++ {
-		tr.AddIO(j.ioType, j.address.Offset(), j.newBuffer(j.ioSize))
+		tr.AddIO(j.ioFunc, j.address.Offset(), j.newBuffer(j.ioSize))
 	}
 
 	return tr

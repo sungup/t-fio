@@ -86,6 +86,27 @@ func TestAsyncIO_WriteAt(t *testing.T) {
 	}
 }
 
+func TestAsyncIO_GetIOFunc(t *testing.T) {
+	var (
+		generated DoIO
+		err       error
+
+		tested = AsyncIO{}
+	)
+
+	generated, err = tested.GetIOFunc(Read)
+	assert.NotNil(t, generated)
+	assert.NoError(t, err)
+
+	generated, err = tested.GetIOFunc(Write)
+	assert.NotNil(t, generated)
+	assert.NoError(t, err)
+
+	generated, err = tested.GetIOFunc(UnsupportedType)
+	assert.Nil(t, generated)
+	assert.Error(t, err)
+}
+
 func TestAsyncIO_Close(t *testing.T) {
 	tcFile, tcCloser, err := test.OpenTCFile("TestAsyncIO_Close", tcFileSz)
 	assert.NoError(t, err)

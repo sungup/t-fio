@@ -43,6 +43,10 @@ func (f *IOURing) WriteAt(p []byte, offset int64, callback Callback) (err error)
 	return err
 }
 
+func (f *IOURing) GetIOFunc(ioType IOType) (io DoIO, err error) {
+	return getIOFunc(f, ioType)
+}
+
 func (f *IOURing) Close() (err error) {
 	f.ctx.Done()
 
