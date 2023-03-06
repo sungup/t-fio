@@ -7,7 +7,10 @@ import (
 	"context"
 	"github.com/iceber/iouring-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/sungup/t-fio/pkg/measure"
 	"github.com/sungup/t-fio/test"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -166,5 +169,55 @@ func TestIOURing_Close(t *testing.T) {
 }
 
 func TestIOURing_Run(t *testing.T) {
-	assert.Fail(t, "not yet implemented")
+	tcFile, tcCloser, err := test.OpenTCFile("TestIOURing_Run", tcFileSz)
+	assert.NoError(t, err)
+	defer tcCloser()
+
+	tested := IOURing{
+		fp:           tcFile,
+		ch:           make(chan iouring.Result, tcIourQd),
+		handlerCount: tcIourQd,
+	}
+	tested.uring, _ = iouring.New(tcIourQd)
+
+	ctx, closer := context.WithCancel(context.Background())
+	defer closer()
+
+	tested.Run(ctx)
+
+	wg := sync.WaitGroup{}
+	issued := int32(0)
+	done := int32(0)
+
+	// expectedMinDuration is the best time with tcIourQd parallelism
+	expectedMinDuration := (tcFileSz / test.BufferSz / tcIourQd) * time.Millisecond
+	// expectedMaxDuration is the worst time calculated with best time + 50% IO penalty
+	expectedMaxDuration := expectedMinDuration * 15 / 10
+
+	lat := measure.LatencyMeasureStart()
+	for tcOffset := int64(0); tcOffset < tcFileSz; tcOffset += test.BufferSz {
+		var testedBuffer [test.BufferSz]byte
+
+		prep := iouring.Pread(int(tested.fp.Fd()), testedBuffer[:], uint64(tcOffset)).WithCallback(func(result iouring.Result) error {
+			time.Sleep(time.Millisecond)
+			atomic.AddInt32(&done, 1)
+			wg.Done()
+			return nil
+		})
+
+		wg.Add(1)
+		issued++
+		req, err := tested.uring.SubmitRequest(prep, tested.ch)
+		assert.NotNil(t, req)
+		assert.NoError(t, err)
+	}
+
+	assert.Greater(t, issued, done)
+	wg.Wait()
+	recordedLat := lat()
+
+	// recordedLat should be
+	assert.GreaterOrEqual(t, recordedLat, expectedMinDuration)
+	assert.LessOrEqual(t, recordedLat, expectedMaxDuration)
+	assert.Equal(t, issued, done)
 }
