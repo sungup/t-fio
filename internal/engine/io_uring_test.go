@@ -23,7 +23,6 @@ func tcInitIOURing() (iour *IOURing, closer func()) {
 		fp:           nil,
 		uring:        uring,
 		ch:           ch,
-		ctx:          ctx,
 		handlerCount: tcIourQd,
 	}
 
@@ -46,7 +45,7 @@ func tcInitIOURing() (iour *IOURing, closer func()) {
 	}
 }
 
-func TestIOUring_ReadAt(t *testing.T) {
+func TestIOURing_ReadAt(t *testing.T) {
 	tcCounter := test.AtomicCounter(0)
 	tcFailedCB := makeFailedCallback(t, &tcCounter)
 	tcSuccessCB := makeSuccessCallback(t, &tcCounter)
@@ -80,7 +79,7 @@ func TestIOUring_ReadAt(t *testing.T) {
 	tcCounter.Wait()
 }
 
-func TestIOUring_WriteAt(t *testing.T) {
+func TestIOURing_WriteAt(t *testing.T) {
 	tcCounter := test.AtomicCounter(0)
 	writtenBuffer := make([]byte, test.BufferSz)
 	expectedBuffer := make([]byte, test.BufferSz)
@@ -147,7 +146,7 @@ func TestIOURing_GetIOFunc(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestIOUring_Close(t *testing.T) {
+func TestIOURing_Close(t *testing.T) {
 	tcFile, tcCloser, err := test.OpenTCFile("TestIOUring_Close", tcFileSz)
 	assert.NoError(t, err)
 	defer tcCloser()
@@ -164,4 +163,8 @@ func TestIOUring_Close(t *testing.T) {
 	assert.False(t, tested.uring.IsClosed())
 	assert.Error(t, tested.Close())
 	assert.True(t, tested.uring.IsClosed())
+}
+
+func TestIOURing_Run(t *testing.T) {
+	assert.Fail(t, "not yet implemented")
 }

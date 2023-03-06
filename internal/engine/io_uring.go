@@ -13,8 +13,7 @@ type IOURing struct {
 	fp    *os.File
 	uring *iouring.IOURing
 
-	ch  chan iouring.Result
-	ctx context.Context
+	ch chan iouring.Result
 
 	handlerCount int
 }
@@ -48,8 +47,6 @@ func (f *IOURing) GetIOFunc(ioType IOType) (io DoIO, err error) {
 }
 
 func (f *IOURing) Close() (err error) {
-	f.ctx.Done()
-
 	if err = f.uring.Close(); err == nil {
 		err = f.fp.Close()
 	}
@@ -57,18 +54,18 @@ func (f *IOURing) Close() (err error) {
 	return err
 }
 
-func (f *IOURing) runResultHandler() {
+func (f *IOURing) Run(ctx context.Context) {
 	for i := 0; i < f.handlerCount; i++ {
 		// start handling routines
-		go func(ch <-chan iouring.Result) {
+		go func(ch <-chan iouring.Result, ctx context.Context) {
 			for {
 				select {
 				case result := <-ch:
 					_ = result.Callback()
-				case <-f.ctx.Done():
+				case <-ctx.Done():
 					return
 				}
 			}
-		}(f.ch)
+		}(f.ch, ctx)
 	}
 }

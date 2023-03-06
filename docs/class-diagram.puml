@@ -1,16 +1,30 @@
 @startuml
 
+namespace common {
+    interface Thread {
+        + Run((ctx context.Context)
+    }
+}
+
 namespace io {
     class IO << (S,Aquamarine) >> {
         - jobId int64
         - offset int64
         - buffer []byte
         - issue <font color=blue>func</font>(*os.File, int64, []byte, <font color=blue>func</font>(bool) ) error
-        - latency <font color=blue>func</font>() time.Duration
-        - wait *sync.WaitGroup
 
-        + Issue(fp *os.File) error
-        + Callback(success bool)
+        + Issue(wait *sync.WaitGroup) error
+    }
+}
+
+namespace transaction {
+    class Transaction << (S, Aquamarine) >> {
+        - jobId int64
+        - ios []*io.IO
+
+        + ProcessAll() error
+        + AddIO(ioAction engine.DoIO, offset int64, buffer *bytebuf.ByteBuf)
+        + IOs() int
     }
 }
 
@@ -81,40 +95,67 @@ namespace rand {
 
 namespace job {
     class Job << (S, Aquamarine) >> {
-        - fp *os.File
+        - ioEngine engine.Engine
+        - ioFunc engine.DoIO
         - jobId int64
-        - ioType io.Type
         - ioSize int
         - address *pattern.Generator
         - delay time.Duration
         - trLength int
-        - queue <font color=blue>chan</font> *transaction.Transaction
+        - buffer <font color=blue>chan</font> *transaction.Transaction
 
-        - newBuffer <font color=blue>func</font>(sz int) []byte
+        - newBuffer <font color=blue>func</font>(sz int) *bytebuf.ByteBuf
+        - newTransaction() *transaction.Transaction
 
         + Run(ctx context.Context)
-        + MakeTransaction() *Transaction
         + TransactionReceiver() <font color=blue>chan</font> *transaction.Transaction
     }
 }
-namespace transaction {
-    ' Transaction Generator
-    class Generator << (S, Aquamarine) >> {
-        - jobQueue <font color=blue>chan</font> *Transaction
-        - job []*job
-        - fp *os.File
 
-        + Run()
+namespace engine {
+    interface Engine {
+        + ReadAt(p []byte, offset int64, callback Callback) error
+        + WriteAt(p []byte, offset int64, callback Callback) error
+        + GetIOFunc(type IOType) DoIO, error
+        + Close() error
     }
-    class Transaction << (S, Aquamarine) >> {
-        - jobId int64
-        - ios []*io.IO
+
+    class SyncIO << (S, Aquamarine) >> {
         - fp *os.File
 
-        + ProcessAll() error
-        + AddIO(ioType io.Type, offset int64, buffer[]byte)
+        + ReadAt(p []byte, offset int64, callback Callback) error
+        + WriteAt(p []byte, offset int64, callback Callback) error
+        + GetIOFunc(type IOType) DoIO, error
+        + Close() error
+    }
+
+    class AsyncIO << (S, Aquamarine) >> {
+        - fp *os.File
+
+        + ReadAt(p []byte, offset int64, callback Callback) error
+        + WriteAt(p []byte, offset int64, callback Callback) error
+        + GetIOFunc(type IOType) DoIO, error
+        + Close() error
+    }
+
+    class IOURing << (S, Aquamarine) >> {
+        - fp *os.File
+        - uring *iouring.IOURing
+        - ch chan iouring.Result
+        - ctx context.Context
+        - handlerCount int
+
+        - Run(ctx context.Context)
+
+        + ReadAt(p []byte, offset int64, callback Callback) error
+        + WriteAt(p []byte, offset int64, callback Callback) error
+        + GetIOFunc(type IOType) DoIO, error
+        + Close() error
     }
 }
+"engine.Engine" <|-- "engine.AsyncIO"
+"engine.Engine" <|-- "engine.SyncIO"
+"engine.Engine" <|-- "engine.IOURing"
 
 namespace worker {
     /'
@@ -131,6 +172,10 @@ namespace worker {
 "pattern.Randomizer" o-- "rand.Rand"
 "transaction.Transaction" o-- "io.IO"
 "job.Job" *-- "pattern.Generator"
-"worker.Worker" "consumer" --- "producer" "transaction.Generator"
+"job.Job" *-- "engine.Engine"
+"worker.Worker" "consumer" --- "producer" "job.Job"
+"common.Thread" <|-- "job.Job"
+"common.Thread" <|-- "worker.Worker"
+"common.Thread" <|-- "engine.IOURing"
 
 @enduml
