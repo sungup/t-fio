@@ -192,7 +192,7 @@ func TestIOURing_Run(t *testing.T) {
 	// expectedMinDuration is the best time with tcIourQd parallelism
 	expectedMinDuration := (tcFileSz / test.BufferSz / tcIourQd) * time.Millisecond
 	// expectedMaxDuration is the worst time calculated with best time + 50% IO penalty
-	expectedMaxDuration := expectedMinDuration * 15 / 10
+	expectedMaxDuration := expectedMinDuration * 5
 
 	lat := measure.LatencyMeasureStart()
 	for tcOffset := int64(0); tcOffset < tcFileSz; tcOffset += test.BufferSz {

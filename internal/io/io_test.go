@@ -39,7 +39,7 @@ func TestIO_Issue(t *testing.T) {
 		assert.Equal(t, tested.offset, testedOffset)
 		assert.NotNil(t, testedCB)
 
-		testedCB(test.BufferSz, nil)
+		testedCB(test.BufferSz, expectedError)
 
 		return expectedError
 	}

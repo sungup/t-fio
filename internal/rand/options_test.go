@@ -111,7 +111,6 @@ func TestDistribution_UnmarshalYAML(t *testing.T) {
 			buffer := []byte(fmt.Sprintf(template, in))
 			assert.NoError(t, yaml.Unmarshal(buffer, tested))
 			assert.Equal(t, expected, tested.Distribution)
-
 		}
 	}
 }
